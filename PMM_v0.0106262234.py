@@ -17,9 +17,17 @@ import json
 
 #### MAKE A CLASS FOR MODS?
 
+class SearchBar(QLineEdit):
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.clear()
+            return
+        super().keyPressEvent(event)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.meow_button_count = 0
         self.base_dir = Path(os.environ["USERPROFILE"])
         self.local_mod_dir = self.base_dir / "AppData/LocalLow/Paralives/Paralives"
         self.settings = self.load_settings()
@@ -61,12 +69,13 @@ class MainWindow(QMainWindow):
         # refresh_btn.setMaximumWidth(40)
         refresh_btn.clicked.connect(self.refresh)
 
-        search_bar = QLineEdit()
-        search_bar.setPlaceholderText("Not implemented yet...")
+        self.search_bar = SearchBar()
+        self.search_bar.setPlaceholderText("Search...")
+        self.search_bar.textChanged.connect(self.filter_mods)
 
-        search_btn = QPushButton("Search")
+        meow_btn = QPushButton("Meow")
         # search_btn.setMaximumWidth(120)
-        search_btn.clicked.connect(lambda: print("Clicked 'Search' Button"))
+        meow_btn.clicked.connect(self.meow)
 
         add_mod_btn = QPushButton("Add Mod")
         # add_mod_btn.setMaximumWidth(40)
@@ -88,8 +97,8 @@ class MainWindow(QMainWindow):
         # ASSEMBLE TOP PANEL
         # ----------------------------
         top_bar_layout.addWidget(refresh_btn)
-        top_bar_layout.addWidget(search_bar)
-        top_bar_layout.addWidget(search_btn)
+        top_bar_layout.addWidget(self.search_bar)
+        # top_bar_layout.addWidget(meow_btn)
         top_bar_layout.addWidget(add_mod_btn)
         top_bar_layout.addWidget(delete_mods_btn)
         top_bar_layout.addWidget(deploy_mods_btn)
@@ -130,6 +139,8 @@ class MainWindow(QMainWindow):
         mod_info_layout.setContentsMargins(10,10,10,10)
         mod_info_layout.setSpacing(5)
 
+        self.thumbnail = QLabel()
+        self.thumbnail.setAlignment(Qt.AlignCenter)
         self.mod_name_label = QLabel("Mod Name:")
         self.mod_creator_label = QLabel("Creator:")
         self.mod_enabled_state = QLabel("")
@@ -144,6 +155,7 @@ class MainWindow(QMainWindow):
         # =========================================================
         # ADD TO MOD INFO
         # =========================================================
+        mod_info_layout.addWidget(self.thumbnail)
         mod_info_layout.addWidget(self.mod_name_label)
         mod_info_layout.addWidget(self.mod_creator_label)
         mod_info_layout.addWidget(self.mod_enabled_state)
@@ -437,22 +449,6 @@ class MainWindow(QMainWindow):
         app_id = "1118520"
         os.startfile(f"steam://run/{app_id}")
 
-    def set_thumbnail(self, path: str):
-        pixmap = QPixmap(path)
-
-        if pixmap.isNull():
-            self.thumbnail.clear()
-            print("Failed to load image:", path)
-            return
-
-        pixmap = pixmap.scaled(
-            200, 200,
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
-        )
-
-        self.thumbnail.setPixmap(pixmap)
-
     def display_metadata(self):
         item = self.mod_list.currentItem()
 
@@ -466,6 +462,17 @@ class MainWindow(QMainWindow):
             return
 
         # ---- Changes ----
+        thumbnail_path = mod.get('Thumbnail')
+        if thumbnail_path:
+            piximap = QPixmap(thumbnail_path)
+            self.thumbnail.setPixmap(piximap.scaled(
+                200,
+                200,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation)
+                                     )
+
+
         self.mod_name_label.setText(f"Mod Name: {mod.get('ModName')}")
         self.mod_creator_label.setText(f"Creator: {mod.get('CreatorId')}")
         if mod.get("Enabled") == "True":
@@ -572,6 +579,24 @@ class MainWindow(QMainWindow):
     def refresh(self):
         self.get_installed_mods()
         self.load_mods()
+
+    def filter_mods(self, text):
+        text = text.lower().strip()
+
+        for row in range(self.mod_list.count()):
+            item = self.mod_list.item(row)
+            # guid = item.data(Qt.UserRole)
+
+            matches = text in item.text().lower()
+            item.setHidden(not matches)
+
+    def meow(self):
+        self.meow_button_count += 1
+        if self.meow_button_count > 20:
+
+            print("Billie")
+        else:
+            return
 
 
 if __name__ == "__main__":
