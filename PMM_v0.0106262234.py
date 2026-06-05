@@ -14,6 +14,7 @@ from shutil import rmtree
 import tempfile
 import os
 import json
+import sys
 
 #### MAKE A CLASS FOR MODS?
 
@@ -491,8 +492,11 @@ class MainWindow(QMainWindow):
             with open("settings.json", "r") as f:
                 settings = json.load(f)
 
+            
+
         except (FileNotFoundError, json.JSONDecodeError):
 
+            QMessageBox.information(None, "Select Game EXE", "Select your 'Paralives.exe' file on the next screen.")
             possible_exe_locations = [Path(r"C:\Program Files (x86)\Steam\steamapps\common\Paralives"),
                                       Path(r"D:\SteamLibrary\steamapps\common\Paralives"),
                                       Path(r"E:\SteamLibrary\steamapps\common\Paralives")
@@ -507,12 +511,12 @@ class MainWindow(QMainWindow):
 
             game_path = QFileDialog.getOpenFileName(
                 None,
-                "Select Game Executable",
+                "Select 'Paralives.exe'",
                 start_dir, # Starting Path
-                "Excecutable Files (*.exe)"
+                "Excecutable Files (Paralives.exe)"
             )[0]
         
-            if game_path:
+            if Path(game_path).name == "Paralives.exe":
                 file_path = Path(game_path)
                 drive = file_path.drive
 
@@ -523,6 +527,9 @@ class MainWindow(QMainWindow):
 
                 settings = {"GameDir": game_path,
                             "WorkshopDir": workshop_dir}
+            else:
+                QMessageBox.warning(None, "Error", "File selected was not 'Paralives.exe'.\nPlease re-open the program and try again.")
+                sys.exit()
             
             with open("settings.json", "w") as f:
                 json.dump(settings, f, indent=4)
@@ -597,6 +604,9 @@ class MainWindow(QMainWindow):
             print("Billie")
         else:
             return
+        
+    
+
 
 
 if __name__ == "__main__":
