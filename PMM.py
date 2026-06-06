@@ -247,8 +247,6 @@ class MainWindow(QMainWindow):
         if thumbnail_files:
             meta_data["Thumbnail"] = str(thumbnail_files[0])
 
-        # print(str(meta_path))
-
         current_key = None
 
         with open(str(meta_path), "r", encoding="utf-8") as f:
