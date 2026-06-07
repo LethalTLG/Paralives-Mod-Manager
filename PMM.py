@@ -16,6 +16,8 @@ import os
 import json
 import sys
 import py7zr
+import requests
+import rarfile
 
 #### MAKE A CLASS FOR MODS?
 
@@ -29,6 +31,7 @@ class SearchBar(QLineEdit):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.app_ver = "1.0.3"
         self.meow_button_count = 0 # A counter for a super secret meow button...
         self.base_dir = Path(os.environ["USERPROFILE"]) # Set the base dir for where the users folder is on the OS
         self.local_mod_dir = self.base_dir / "AppData/LocalLow/Paralives/Paralives" # Using the base dir, points to the paralives mod folder.
@@ -40,6 +43,17 @@ class MainWindow(QMainWindow):
         self.installed_mods = [] # This is where all mod data is stored for the program. Initialised by the self.get_installed_mods() function
         self.mod_map = "" # This allows for quick lookup for the installed mods. Allows for a single source of truth approach.
         self.base_mods = ["MySavedGames.mod", "MyPremadeOutfits.mod", "MyPremadeLot.mod", "MyPremadeHouseholds.mod", "MyOptions.mod", "Local.mod", ""] # A list of mods to ignore
+
+        # Set Github API Settings
+        self.owner = "LockeAndStone"
+        self.repo = "Paralives-Mod-Manager"
+        self.giturl = f"https://api.github.com/repos/{self.owner}/{self.repo}/releases/latest"
+        self.response = requests.get(self.giturl, timeout=5)
+        self.latest_version = self.response.json()["tag_name"]
+        self.release_url = self.response.json()["html_url"]
+        print(f"Latest Version: {self.latest_version}\nDownload Link: {self.release_url}")
+        # --------------------------------------------------------
+        
 
         self.get_installed_mods()
 
@@ -338,10 +352,8 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
-        if file_path.endswith(".zip"):
-            self._install_zip(Path(file_path))
-        if file_path.endswith(".7z"):
-            self._install_7zip(Path(file_path))
+        
+        self._install_zip(Path(file_path))
 
         
     # Extracts a mod from a zip file and copies the contents containing the .mod to the local mod dir
@@ -349,8 +361,15 @@ class MainWindow(QMainWindow):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
 
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(tmpdir)
+            if zip_path.suffix.lower() == ".zip":
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(tmpdir)
+            elif zip_path.suffix.lower() == ".7z":
+                with py7zr.SevenZipFile(zip_path, mode='r') as zip_ref:
+                    zip_ref.extractall(tmpdir)
+            elif zip_path.suffix.lower() == ".rar":
+                with rarfile.RarFile(zip_path) as rf:
+                    rf.extractall(tmpdir)
 
             mod_folders = list(tmpdir.rglob("*.mod"))
             if not mod_folders:
@@ -368,36 +387,9 @@ class MainWindow(QMainWindow):
 
         new_mod = self.read_meta_file(final_path)
 
-        self.installed_mods.append(new_mod)
-        self.mod_map[new_mod["GUID"]] = new_mod
+        new_mod["IsFromWorkshop"] = "False"
 
-        self.load_mods()
-
-        print(f"Installed: {new_mod['ModName']}")
-
-    # Extracts a mod from a zip file and copies the contents containing the .mod to the local mod dir
-    def _install_7zip(self, zip_path: Path):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
-
-            with py7zr.SevenZipFile(zip_path, mode='r') as zip_ref:
-                zip_ref.extractall(tmpdir)
-
-            mod_folders = list(tmpdir.rglob("*.mod"))
-            if not mod_folders:
-                print("No .mod folder found")
-                return
-
-            mod_folder = mod_folders[0]
-            final_path = self.local_mod_dir / mod_folder.name
-
-            if final_path.exists():
-                print("Mod already exists")
-                return
-
-            shutil.move(str(mod_folder), final_path)
-
-        new_mod = self.read_meta_file(final_path)
+        self.write_meta_file(new_mod)
 
         self.installed_mods.append(new_mod)
         self.mod_map[new_mod["GUID"]] = new_mod
