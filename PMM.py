@@ -2,7 +2,8 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QHBoxLayout, QVBoxLayout, QLineEdit,
     QListWidget, QFileDialog, QFrame, QLabel, QPushButton,
-    QListWidgetItem, QMessageBox, QDialog, QTextEdit
+    QListWidgetItem, QMessageBox, QDialog, QTextEdit, QSplitter,
+    QToolBar, QWidgetAction
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
@@ -80,6 +81,13 @@ class MainWindow(QMainWindow):
         # ================================
         # TOP BAR
         # ================================
+
+        toolbar = QToolBar("Main Toolbar")
+        self.addToolBar(toolbar)
+
+        ### Add actions to replace top panel
+
+
         top_bar = QFrame()
         top_bar.setFrameShape(QFrame.StyledPanel)
         top_bar_layout = QHBoxLayout(top_bar)
@@ -143,14 +151,18 @@ class MainWindow(QMainWindow):
         # MOD LIST
         # ----------------------------
         self.mod_list = QListWidget()
+        self.mod_list.setMinimumWidth(200)
         self.load_mods()      
         self.mod_list.itemClicked.connect(self.display_metadata)
         self.mod_list.itemChanged.connect(self.on_item_changed)
+
+        
 
         # ----------------------------
         # META DATA PANEL
         # ----------------------------
         mod_view = QFrame()
+        mod_view.setMinimumWidth(300)
         mod_view.setFrameStyle(QFrame.StyledPanel)
 
         mod_view_layout = QVBoxLayout(mod_view)
@@ -194,17 +206,24 @@ class MainWindow(QMainWindow):
         # mod_view_layout.addWidget(mod_view_title, alignment=Qt.AlignCenter)
         mod_view_layout.addWidget(mod_info, alignment=Qt.AlignCenter, stretch=1)
 
+        splitter = QSplitter()
+        splitter.addWidget(self.mod_list)
+        splitter.addWidget(mod_view)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 2)
+        splitter.setChildrenCollapsible(False)
+
         # =========================================================
         # ADD TO Main Panel
         # =========================================================
-        main_panel_layout.addWidget(self.mod_list, stretch=2)
-        main_panel_layout.addWidget(mod_view, stretch=1)
+        main_panel_layout.addWidget(splitter)
+        # main_panel_layout.addWidget(mod_view, stretch=1)
 
         # =========================================================
         # ADD TO ROOT
         # =========================================================
         root_layout.addWidget(top_bar)
-        root_layout.addWidget(main_panel)
+        root_layout.addWidget(main_panel, stretch=2)
 
     # builds the list of mods in the mod list and stores the GUID for use in the hash_map
     def load_mods(self):
